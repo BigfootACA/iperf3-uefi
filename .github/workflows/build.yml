@@ -1,0 +1,59 @@
+name: Build Package
+
+"on":
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            efi_arch: X64
+            runner: ubuntu-latest
+          - arch: arm64
+            efi_arch: AARCH64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            debhelper \
+            devscripts \
+            fakeroot \
+            gcc \
+            git \
+            make \
+            nasm \
+            python3 \
+            uuid-dev
+
+      - name: Build package
+        run: |
+          dpkg-buildpackage -b
+          cp ../*.deb .
+          cp -v build/Build/IPerf3Pkg/RELEASE_GCC5/${{ matrix.efi_arch }}/IPerf3.efi .
+          cp -v build/Build/IPerf3Pkg/RELEASE_GCC5/${{ matrix.efi_arch }}/IPerf3.debug .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iperf3-uefi-${{ matrix.arch }}
+          path: |
+            *.deb
+            IPerf3.efi
+            IPerf3.debug
+          if-no-files-found: error

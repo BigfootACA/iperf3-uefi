@@ -1,0 +1,25 @@
+Source: iperf3-uefi
+Section: net
+Priority: optional
+Maintainer: BigfootACA <bigfoot@classfun.cn>
+Build-Depends: debhelper,
+               gcc,
+               git,
+               make,
+               nasm,
+               python3,
+               uuid-dev,
+               build-essential
+Standards-Version: 4.6.0
+Homepage: https://github.com/BigfootACA/iperf3-uefi
+Vcs-Git: https://github.com/BigfootACA/iperf3-uefi.git
+Vcs-Browser: https://github.com/BigfootACA/iperf3-uefi
+Rules-Requires-Root: no
+
+Package: iperf3-uefi
+Architecture: any
+Depends: ${misc:Depends}
+Description: iperf3 client for the UEFI Shell
+ iperf3-uefi is an iperf3 client built on EDK II network protocols. It
+ supports TCP and UDP tests over IPv4 or IPv6, DNS server names, reverse mode,
+ and configurable transfer limits, bitrate, block size, and report intervals.

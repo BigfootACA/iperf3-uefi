@@ -1,0 +1,16 @@
+/build/
+/pkg/
+/src/
+/*.pkg.tar.*
+*.efi
+*.debug
+*.fd
+*.img
+*.log
+*.orig
+*.rej
+*.swp
+*~
+.cache/
+.vscode/
+compile_commands.json

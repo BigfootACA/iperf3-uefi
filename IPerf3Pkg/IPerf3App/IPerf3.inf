@@ -1,0 +1,54 @@
+[Defines]
+  INF_VERSION                    = 0x00010006
+  BASE_NAME                      = IPerf3
+  FILE_GUID                      = 7B9DEB2A-5065-4B0B-95D3-5495C28663A9
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = UefiMain
+
+[Sources]
+  Arguments.c
+  Main.c
+  Output.c
+  PeerJson.c
+  Protocol.c
+  Resolve.c
+  Socket.c
+  Tcp4.c
+  Tcp6.c
+  Transfer.c
+  Udp4.c
+  Udp6.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  NetworkPkg/NetworkPkg.dec
+  ShellPkg/ShellPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  NetLib
+  PrintLib
+  TimerLib
+  UefiApplicationEntryPoint
+  UefiBootServicesTableLib
+  UefiLib
+
+[Protocols]
+  gEfiShellParametersProtocolGuid
+  gEfiDns4ServiceBindingProtocolGuid
+  gEfiDns4ProtocolGuid
+  gEfiDns6ServiceBindingProtocolGuid
+  gEfiDns6ProtocolGuid
+  gEfiIp6ConfigProtocolGuid
+  gEfiTcp4ServiceBindingProtocolGuid
+  gEfiTcp4ProtocolGuid
+  gEfiTcp6ServiceBindingProtocolGuid
+  gEfiTcp6ProtocolGuid
+  gEfiUdp4ServiceBindingProtocolGuid
+  gEfiUdp4ProtocolGuid
+  gEfiUdp6ServiceBindingProtocolGuid
+  gEfiUdp6ProtocolGuid

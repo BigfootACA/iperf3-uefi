@@ -98,6 +98,154 @@ Iperf3Ipv6ControllerIsAutomatic (
   return Policy == Ip6ConfigPolicyAutomatic;
 }
 
+STATIC
+EFI_STATUS
+Iperf3Ipv4InterfaceNameMatches (
+  IN EFI_HANDLE  Controller,
+  IN CHAR16      *Name,
+  OUT BOOLEAN    *Matches
+  )
+{
+  EFI_IP4_CONFIG2_PROTOCOL       *Ip4Config;
+  EFI_IP4_CONFIG2_INTERFACE_INFO *IfInfo;
+  EFI_STATUS Status;
+  UINTN Size;
+  *Matches = FALSE;
+  Status = gBS->HandleProtocol (
+    Controller, &gEfiIp4Config2ProtocolGuid, (VOID **)&Ip4Config
+    );
+  if (EFI_ERROR (Status))
+    return Status;
+  Size = 0;
+  Status = Ip4Config->GetData (
+    Ip4Config, Ip4Config2DataTypeInterfaceInfo, &Size, NULL
+    );
+  if (Status != EFI_BUFFER_TOO_SMALL)
+    return EFI_SUCCESS;
+  IfInfo = AllocatePool (Size);
+  if (IfInfo == NULL)
+    return EFI_OUT_OF_RESOURCES;
+  Status = Ip4Config->GetData (
+    Ip4Config, Ip4Config2DataTypeInterfaceInfo, &Size, IfInfo
+    );
+  if (!EFI_ERROR (Status))
+    *Matches = (BOOLEAN)(StrCmp (Name, IfInfo->Name) == 0);
+  FreePool (IfInfo);
+  return Status;
+}
+
+STATIC
+EFI_STATUS
+Iperf3Ipv6InterfaceNameMatches (
+  IN EFI_HANDLE  Controller,
+  IN CHAR16      *Name,
+  OUT BOOLEAN    *Matches
+  )
+{
+  EFI_IP6_CONFIG_PROTOCOL       *Ip6Config;
+  EFI_IP6_CONFIG_INTERFACE_INFO *IfInfo;
+  EFI_STATUS Status;
+  UINTN Size;
+  *Matches = FALSE;
+  Status = gBS->HandleProtocol (
+    Controller, &gEfiIp6ConfigProtocolGuid, (VOID **)&Ip6Config
+    );
+  if (EFI_ERROR (Status))
+    return Status;
+  Size = 0;
+  Status = Ip6Config->GetData (
+    Ip6Config, Ip6ConfigDataTypeInterfaceInfo, &Size, NULL
+    );
+  if (Status != EFI_BUFFER_TOO_SMALL)
+    return EFI_SUCCESS;
+  IfInfo = AllocatePool (Size);
+  if (IfInfo == NULL)
+    return EFI_OUT_OF_RESOURCES;
+  Status = Ip6Config->GetData (
+    Ip6Config, Ip6ConfigDataTypeInterfaceInfo, &Size, IfInfo
+    );
+  if (!EFI_ERROR (Status))
+    *Matches = (BOOLEAN)(StrCmp (Name, IfInfo->Name) == 0);
+  FreePool (IfInfo);
+  return Status;
+}
+
+EFI_STATUS
+Iperf3ControllerMatchesInterface (
+  IN EFI_HANDLE         Controller,
+  IN IPERF3_IP_VERSION  Version,
+  IN CHAR16             *Name,
+  OUT BOOLEAN           *Matches
+  )
+{
+  EFI_STATUS Status;
+  BOOLEAN Matched;
+  if (Controller == NULL || Name == NULL || Matches == NULL)
+    return EFI_INVALID_PARAMETER;
+  *Matches = FALSE;
+  if (Version == Iperf3IpVersion4)
+    Status = Iperf3Ipv4InterfaceNameMatches (Controller, Name, Matches);
+  else if (Version == Iperf3IpVersion6)
+    Status = Iperf3Ipv6InterfaceNameMatches (Controller, Name, Matches);
+  else
+    return EFI_INVALID_PARAMETER;
+  if (EFI_ERROR (Status) || *Matches)
+    return Status;
+  if (Version == Iperf3IpVersion4)
+    Status = Iperf3Ipv6InterfaceNameMatches (Controller, Name, &Matched);
+  else
+    Status = Iperf3Ipv4InterfaceNameMatches (Controller, Name, &Matched);
+  if (!EFI_ERROR (Status) && Matched)
+    *Matches = TRUE;
+  return Status;
+}
+
+EFI_STATUS
+Iperf3FindControllerByName (
+  IN IPERF3_IP_VERSION Version,
+  IN CHAR16            *Name,
+  OUT EFI_HANDLE       *Controller
+  )
+{
+  EFI_GUID *BindingGuid;
+  EFI_HANDLE *Handles;
+  EFI_STATUS Status;
+  UINTN Count, Index;
+  BOOLEAN Matches;
+  if (Name == NULL || Controller == NULL)
+    return EFI_INVALID_PARAMETER;
+  *Controller = NULL;
+  if (Version == Iperf3IpVersion4)
+    BindingGuid = &gEfiIp4ServiceBindingProtocolGuid;
+  else if (Version == Iperf3IpVersion6)
+    BindingGuid = &gEfiIp6ServiceBindingProtocolGuid;
+  else
+    return EFI_INVALID_PARAMETER;
+  Handles = NULL;
+  Count = 0;
+  Status = gBS->LocateHandleBuffer (
+    ByProtocol, BindingGuid, NULL, &Count, &Handles
+    );
+  if (EFI_ERROR (Status))
+    return Status;
+  Status = EFI_NOT_FOUND;
+  for (Index = 0; Index < Count; Index++) {
+    if (EFI_ERROR (
+          Iperf3ControllerMatchesInterface (
+            Handles[Index], Version, Name, &Matches
+            )
+          ))
+      continue;
+    if (Matches) {
+      *Controller = Handles[Index];
+      Status = EFI_SUCCESS;
+      break;
+    }
+  }
+  FreePool (Handles);
+  return Status;
+}
+
 EFI_STATUS
 Iperf3TcpConnect (
   IN EFI_HANDLE         ImageHandle,
@@ -153,6 +301,7 @@ Iperf3ConnectResolvedFamily (
   IPERF3_ADDRESS *Addresses;
   EFI_STATUS Status, LastStatus, MediaState;
   UINTN Count, Index, AddressCount, AddressIndex;
+  BOOLEAN Matches;
   BindingGuid = Version == Iperf3IpVersion4 ?
     &gEfiTcp4ServiceBindingProtocolGuid :
     &gEfiTcp6ServiceBindingProtocolGuid;
@@ -163,6 +312,15 @@ Iperf3ConnectResolvedFamily (
     return Status;
   LastStatus = EFI_NOT_FOUND;
   for (Index = 0; Index < Count; Index++) {
+    if (Config->InterfaceName != NULL) {
+      Status = Iperf3ControllerMatchesInterface (
+        Handles[Index], Version, Config->InterfaceName, &Matches
+        );
+      if (EFI_ERROR (Status) || !Matches) {
+        LastStatus = EFI_NOT_FOUND;
+        continue;
+      }
+    }
     Status = NetLibDetectMediaWaitTimeout (Handles[Index], 0, &MediaState);
     if (!EFI_ERROR (Status) && MediaState != EFI_SUCCESS) {
       LastStatus = MediaState;
@@ -206,11 +364,24 @@ Iperf3TcpConnectServer (
   )
 {
   EFI_STATUS Status;
-  if (Config->ServerAddress.Version != Iperf3IpVersionAny)
+  EFI_HANDLE Controller;
+  if (Config->ServerAddress.Version != Iperf3IpVersionAny) {
+    if (Config->InterfaceName != NULL) {
+      Status = Iperf3FindControllerByName (
+        Config->ServerAddress.Version, Config->InterfaceName, &Controller
+        );
+      if (EFI_ERROR (Status))
+        return Status;
+      return Iperf3TcpConnect (
+        ImageHandle, Controller, &Config->ServerAddress,
+        Config->ServerPort, Config->WindowSize, Socket
+        );
+    }
     return Iperf3TcpConnect (
       ImageHandle, NULL, &Config->ServerAddress,
       Config->ServerPort, Config->WindowSize, Socket
-    );
+      );
+  }
   if (Config->RequestedVersion != Iperf3IpVersion6) {
     Status = Iperf3ConnectResolvedFamily (ImageHandle, Config, Iperf3IpVersion4, Socket);
     if (!EFI_ERROR (Status))

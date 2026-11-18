@@ -209,6 +209,7 @@ Iperf3TcpOpenOnController (
   UINTN Retry;
   ZeroMem (Socket, sizeof (*Socket));
   Socket->Controller = Controller;
+  gBS->ConnectController (Controller, NULL, NULL, TRUE);
   Status = gBS->HandleProtocol (
     Controller, &gEfiTcp4ServiceBindingProtocolGuid, (VOID **)&Socket->Binding);
   if (EFI_ERROR (Status))

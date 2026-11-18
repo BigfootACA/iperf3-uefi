@@ -8,6 +8,7 @@ Iperf3Usage (
   Print (L"Usage: IPerf3 -c host [-4|-6] [-R] [-u] [-t seconds | -n bytes | -k blocks]\r\n");
   Print (L"              [-i interval] [-b bitrate] [-l length] [-w window]\r\n");
   Print (L"  -c host      iperf3 server address or DNS name (port 5201)\r\n");
+  Print (L"  -I interface network interface to use\r\n");
   Print (L"  -4           use IPv4 only\r\n");
   Print (L"  -6           use IPv6 only\r\n");
   Print (L"  -R           reverse test (server sends)\r\n");
@@ -291,6 +292,8 @@ Iperf3ParseArguments (
     if (StrCmp (Option, L"-h") == 0 || StrCmp (Option, L"--help") == 0)
       return EFI_ABORTED;
     if (StrCmp (Option, L"-c") != 0 &&
+        StrCmp (Option, L"-I") != 0 &&
+        StrCmp (Option, L"--interface") != 0 &&
         StrCmp (Option, L"-t") != 0 &&
         StrCmp (Option, L"-n") != 0 &&
         StrCmp (Option, L"-k") != 0 &&
@@ -307,6 +310,12 @@ Iperf3ParseArguments (
         return EFI_INVALID_PARAMETER;
       Config->ServerName = Argv[Index];
       HaveServer = TRUE;
+      continue;
+    }
+    if (StrCmp (Option, L"-I") == 0 || StrCmp (Option, L"--interface") == 0) {
+      if (Config->InterfaceName != NULL || StrLen (Argv[Index]) == 0)
+        return EFI_INVALID_PARAMETER;
+      Config->InterfaceName = Argv[Index];
       continue;
     }
     if (StrCmp (Option, L"-i") == 0) {

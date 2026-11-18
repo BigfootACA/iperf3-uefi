@@ -213,6 +213,7 @@ Iperf3Tcp6OpenOnController (
     return Status;
   Automatic = Iperf3Ipv6ControllerIsAutomatic (Controller);
   Socket->Controller = Controller;
+  gBS->ConnectController (Controller, NULL, NULL, TRUE);
   Status = gBS->HandleProtocol (
     Controller, &gEfiTcp6ServiceBindingProtocolGuid, (VOID **)&Socket->Binding);
   if (EFI_ERROR (Status))

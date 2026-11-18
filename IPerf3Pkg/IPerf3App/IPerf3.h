@@ -10,6 +10,7 @@
 #include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
+#include <Protocol/Ip4Config2.h>
 #include <Protocol/Ip6Config.h>
 #include <Protocol/ServiceBinding.h>
 #include <Protocol/Tcp4.h>
@@ -73,6 +74,7 @@ typedef struct IPERF3_ADDRESS {
 typedef struct IPERF3_CONFIG {
   IPERF3_ADDRESS    ServerAddress;
   CHAR16            *ServerName;
+  CHAR16            *InterfaceName;
   IPERF3_IP_VERSION RequestedVersion;
   UINT16            ServerPort;
   BOOLEAN           Reverse;
@@ -410,6 +412,21 @@ Iperf3PrepareIpv6Controller (
 BOOLEAN
 Iperf3Ipv6ControllerIsAutomatic (
   IN EFI_HANDLE Controller
+  );
+
+EFI_STATUS
+Iperf3FindControllerByName (
+  IN IPERF3_IP_VERSION Version,
+  IN CHAR16            *Name,
+  OUT EFI_HANDLE       *Controller
+  );
+
+EFI_STATUS
+Iperf3ControllerMatchesInterface (
+  IN EFI_HANDLE         Controller,
+  IN IPERF3_IP_VERSION  Version,
+  IN CHAR16             *Name,
+  OUT BOOLEAN           *Matches
   );
 
 EFI_STATUS

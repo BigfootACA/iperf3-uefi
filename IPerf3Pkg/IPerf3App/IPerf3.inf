@@ -43,7 +43,10 @@
   gEfiDns4ProtocolGuid
   gEfiDns6ServiceBindingProtocolGuid
   gEfiDns6ProtocolGuid
+  gEfiIp4Config2ProtocolGuid
+  gEfiIp4ServiceBindingProtocolGuid
   gEfiIp6ConfigProtocolGuid
+  gEfiIp6ServiceBindingProtocolGuid
   gEfiTcp4ServiceBindingProtocolGuid
   gEfiTcp4ProtocolGuid
   gEfiTcp6ServiceBindingProtocolGuid
